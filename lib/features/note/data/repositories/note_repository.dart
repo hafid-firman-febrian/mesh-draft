@@ -2,6 +2,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:mesh_draft/core/storage/database.dart' as db;
 import 'package:mesh_draft/features/note/data/data_sources/note_local_data_source.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'note_repository.g.dart';
 
 abstract class NoteRepository {
   Future<List<Note>> getAllNotes();
@@ -67,4 +70,11 @@ class NoteRepositoryImpl implements NoteRepository {
         createdAt: Value(note.createdAt),
         updatedAt: Value(note.updatedAt),
       );
+}
+
+@riverpod
+NoteRepository noteRepository(Ref ref) {
+  return NoteRepositoryImpl(
+    localDataSource: ref.watch(noteLocalDataSourceProvider),
+  );
 }

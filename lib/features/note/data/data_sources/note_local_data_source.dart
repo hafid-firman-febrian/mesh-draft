@@ -1,5 +1,9 @@
 import 'package:drift/drift.dart';
 import 'package:mesh_draft/core/storage/database.dart';
+import 'package:mesh_draft/core/storage/database_provider.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'note_local_data_source.g.dart';
 
 class NoteLocalDataSource {
   NoteLocalDataSource(this._db);
@@ -37,4 +41,9 @@ class NoteLocalDataSource {
   Future<void> deleteNote(String id) async {
     await (_db.delete(_db.notes)..where((tbl) => tbl.id.equals(id))).go();
   }
+}
+
+@riverpod
+NoteLocalDataSource noteLocalDataSource(Ref ref) {
+  return NoteLocalDataSource(ref.watch(databaseProvider));
 }
