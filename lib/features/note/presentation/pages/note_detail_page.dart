@@ -5,6 +5,7 @@ import 'package:mesh_draft/core/theme/color_tokens.dart';
 import 'package:mesh_draft/core/utils/date_extensions.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
 import 'package:mesh_draft/features/note/presentation/controllers/note_detail_controller.dart';
+import 'package:mesh_draft/features/note/presentation/widgets/linked_notes_section.dart';
 
 class NoteDetailPage extends ConsumerWidget {
   const NoteDetailPage({super.key, required this.noteId});
@@ -107,6 +108,10 @@ class _DetailBody extends StatelessWidget {
           'Diperbarui: ${note.updatedAt.formattedDateTime}',
           style: metaStyle,
         ),
+        const SizedBox(height: MeshSpacing.lg),
+        const Divider(),
+        const SizedBox(height: MeshSpacing.sm),
+        LinkedNotesSection(noteId: note.id),
       ],
     );
   }

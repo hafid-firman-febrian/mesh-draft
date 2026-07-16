@@ -8,6 +8,10 @@ part 'database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'mesh_draft'));
 
+  // Untuk test: menyuntik executor in-memory (NativeDatabase.memory()) supaya
+  // cascade delete & PRAGMA foreign_keys teruji tanpa file DB nyata.
+  AppDatabase.forTesting(super.executor);
+
   @override
   int get schemaVersion => 1;
 
