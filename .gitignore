@@ -49,3 +49,7 @@ docs/
 *.spec.md
 *.plan.md
 SPIKE_REPORT.md
+
+# Generated code (build_runner: drift, riverpod, freezed) — regenerate, don't commit
+*.g.dart
+*.freezed.dart
