@@ -4,51 +4,29 @@ import 'color_tokens.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light => _build(
-        brightness: Brightness.light,
-        primary: MeshColors.primaryLight,
-        secondary: MeshColors.secondaryLight,
-        surface: MeshColors.surfaceLight,
-        onSurface: MeshColors.textPrimaryLight,
-      );
-
-  static ThemeData get dark => _build(
-        brightness: Brightness.dark,
-        primary: MeshColors.primaryDark,
-        secondary: MeshColors.secondaryDark,
-        surface: MeshColors.surfaceDark,
-        onSurface: MeshColors.textPrimaryDark,
-      );
-
-  static ThemeData _build({
-    required Brightness brightness,
-    required Color primary,
-    required Color secondary,
-    required Color surface,
-    required Color onSurface,
-  }) {
+  static ThemeData get dark {
     final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: brightness,
+      seedColor: MeshColors.fab,
+      brightness: Brightness.dark,
     ).copyWith(
-      primary: primary,
-      secondary: secondary,
-      surface: surface,
-      onSurface: onSurface,
-      error: MeshColors.error,
+      surface: MeshColors.canvas,
+      onSurface: MeshColors.textPrimary,
+      error: MeshColors.danger,
     );
 
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.dark,
       colorScheme: scheme,
-      appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surface,
+      scaffoldBackgroundColor: MeshColors.canvas,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
-        foregroundColor: Colors.white,
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: MeshColors.fab,
+        foregroundColor: MeshColors.textPrimary,
         elevation: 4,
       ),
     );

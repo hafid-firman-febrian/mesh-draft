@@ -14,9 +14,8 @@ class MeshDraftApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'MeshDraft',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark,
       routerConfig: appRouter,
     );
   }
