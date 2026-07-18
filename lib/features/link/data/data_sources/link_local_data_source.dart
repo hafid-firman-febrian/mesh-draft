@@ -10,6 +10,10 @@ class LinkLocalDataSource {
 
   final AppDatabase _db;
 
+  Stream<List<NoteLink>> watchAllLinks() {
+    return _db.select(_db.noteLinks).watch();
+  }
+
   Stream<List<NoteLink>> watchLinksForNote(String noteId) {
     return (_db.select(_db.noteLinks)
           ..where((tbl) => tbl.sourceId.equals(noteId) | tbl.targetId.equals(noteId)))

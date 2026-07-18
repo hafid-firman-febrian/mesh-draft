@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'link_repository.g.dart';
 
 abstract class LinkRepository {
+  Stream<List<NoteLink>> watchAllLinks();
   Stream<List<NoteLink>> watchLinksForNote(String noteId);
   Future<bool> linkExists(String sourceId, String targetId);
   Future<NoteLink> createLink(NoteLink link);
@@ -18,6 +19,13 @@ class LinkRepositoryImpl implements LinkRepository {
       : _local = localDataSource;
 
   final LinkLocalDataSource _local;
+
+  @override
+  Stream<List<NoteLink>> watchAllLinks() {
+    return _local.watchAllLinks().map(
+          (rows) => rows.map(_toDomain).toList(),
+        );
+  }
 
   @override
   Stream<List<NoteLink>> watchLinksForNote(String noteId) {

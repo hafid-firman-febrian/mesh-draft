@@ -3,11 +3,20 @@ import 'dart:ui' show Offset;
 
 const int kSeed = 42;
 
-const double kWorldSize = 5000;
-
 const double kNodeRadius = 16;
 
-const double kInitialTemperature = kWorldSize / 10;
+// Jarak ideal antar node terhubung, TETAP — bukan sqrt(area/n) ala FR klasik.
+// Formula lama membuat graf kecil menyebar sangat jauh (2 node → ~3536), jadi
+// setelah fit node mengecil jadi titik dan node tanpa link (yang terdorong ke
+// cutoff ~3x ideal) terlempar ke luar layar. Simulasi force scale-invariant
+// (repulsi ∝ ideal²/d, atraksi ∝ d²/ideal), jadi skala absolut kecil ini tidak
+// mengubah keseimbangan yang sudah di-tune — hanya mengecilkan hasil akhirnya,
+// dan karena radius node absolut, node jadi lebih besar di layar setelah fit.
+const double kIdealDistance = 200;
+
+// Suhu awal = jarak ideal. Di spike (n=100) temp == ideal secara kebetulan
+// numerik; kForceScale di-tune untuk rasio itu, jadi rasio itu dipertahankan.
+const double kInitialTemperature = kIdealDistance;
 
 const double kCoolingFactor = 0.98;
 
@@ -21,7 +30,14 @@ const double kForceScale = 0.08;
 
 const double kMinSpawnDistance = kNodeRadius * 3;
 
-const double kRepulsionCutoffFactor = 3.0;
+// Batas jarak repulsi = faktor ini × ideal. Selain memangkas beban O(n²) dari
+// pasangan jauh, ini juga menentukan seberapa jauh node TANPA link berhenti:
+// tanpa gaya tarik, mereka terdorong repulsi sampai batas ini lalu diam. 3×
+// bikin node tak-terhubung ~3× lebih jauh dari yang terhubung (timpang); 1.5×
+// merapatkannya tanpa mengubah jarak node terhubung (repulsi masih aktif di
+// jarak ideal karena ideal < cutoff). Turunkan untuk lebih rapat lagi (jangan
+// ≤ ~1.2× — repulsi butuh margin di atas ideal agar cluster tidak kolaps).
+const double kRepulsionCutoffFactor = 1.5;
 
 typedef GraphNodeInput = ({String id, double? x, double? y});
 
@@ -54,6 +70,7 @@ class GraphLayoutService {
   double _idealDistance = 1;
   double _repulsionCutoff = double.infinity;
   double _lastMaxSpeed = 0;
+  double _lastMaxRawDisp = 0;
 
   bool get isConverged => _temperature <= 0;
 
@@ -61,12 +78,20 @@ class GraphLayoutService {
 
   double get lastMaxSpeed => _lastMaxSpeed;
 
+  double get lastMaxRawDisp => _lastMaxRawDisp;
+
   void setGraph({
     required List<GraphNodeInput> nodeInputs,
     required List<GraphEdgeInput> edgeInputs,
   }) {
     final previous = {for (final node in nodes) node.id: node};
     final placed = <GraphNode>[];
+
+    // Sisi area spawn: n node dengan kerapatan ~1 per kIdealDistance² → node
+    // lahir kira-kira sejauh jarak ideal, dan (untuk graf kecil) di dalam radius
+    // cutoff satu sama lain, sehingga node tanpa link pun terdorong ke jarak
+    // terbatas alih-alih tertinggal jauh di titik spawn acaknya.
+    final spawnSize = kIdealDistance * sqrt(max(nodeInputs.length, 1));
 
     for (final input in nodeInputs) {
       if (input.x != null && input.y != null) {
@@ -90,7 +115,7 @@ class GraphLayoutService {
       placed.add(
         GraphNode(
           id: input.id,
-          position: _spawnPosition(placed),
+          position: _spawnPosition(placed, spawnSize),
           pinned: false,
         ),
       );
@@ -110,10 +135,8 @@ class GraphLayoutService {
       }
     }
 
-    _idealDistance = nodes.isEmpty
-        ? 1
-        : sqrt((kWorldSize * kWorldSize) / nodes.length);
-    _repulsionCutoff = _idealDistance * kRepulsionCutoffFactor;
+    _idealDistance = kIdealDistance;
+    _repulsionCutoff = kIdealDistance * kRepulsionCutoffFactor;
 
     reheat();
   }
@@ -122,10 +145,10 @@ class GraphLayoutService {
     _temperature = kInitialTemperature;
   }
 
-  Offset _spawnPosition(List<GraphNode> placed) {
+  Offset _spawnPosition(List<GraphNode> placed, double spawnSize) {
     Offset random() => Offset(
-      kNodeRadius + _rng.nextDouble() * (kWorldSize - 2 * kNodeRadius),
-      kNodeRadius + _rng.nextDouble() * (kWorldSize - 2 * kNodeRadius),
+      kNodeRadius + _rng.nextDouble() * (spawnSize - 2 * kNodeRadius),
+      kNodeRadius + _rng.nextDouble() * (spawnSize - 2 * kNodeRadius),
     );
     var pos = random();
     var attempts = 0;
@@ -173,7 +196,9 @@ class GraphLayoutService {
     }
 
     var maxSpeed = 0.0;
+    var maxRawDisp = 0.0;
     for (var i = 0; i < n; i++) {
+      maxRawDisp = max(maxRawDisp, disp[i].distance);
       final node = nodes[i];
       if (node.pinned) {
         node.velocity = Offset.zero;
@@ -190,6 +215,7 @@ class GraphLayoutService {
       maxSpeed = max(maxSpeed, v.distance);
     }
     _lastMaxSpeed = maxSpeed;
+    _lastMaxRawDisp = maxRawDisp;
 
     _temperature *= kCoolingFactor;
     if (_temperature < kTemperatureCutoff) {

@@ -12,6 +12,8 @@ class LinkService {
   final LinkRepository _repository;
   final Uuid _uuid;
 
+  Stream<List<NoteLink>> watchAllLinks() => _repository.watchAllLinks();
+
   Stream<List<NoteLink>> watchLinksForNote(String noteId) =>
       _repository.watchLinksForNote(noteId);
 

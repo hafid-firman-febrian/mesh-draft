@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:mesh_draft/features/graph/presentation/pages/graph_page.dart';
 import 'package:mesh_draft/features/link/presentation/pages/link_modal_page.dart';
 import 'package:mesh_draft/features/note/presentation/pages/note_detail_page.dart';
 import 'package:mesh_draft/features/note/presentation/pages/note_form_page.dart';
@@ -10,6 +11,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const NoteListPage(),
+    ),
+    GoRoute(
+      path: '/graph',
+      builder: (context, state) => const GraphPage(),
     ),
     GoRoute(
       path: '/create',
