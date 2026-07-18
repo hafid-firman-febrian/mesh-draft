@@ -29,11 +29,6 @@ class GraphPage extends ConsumerWidget {
               onPressed: () => clearAllNotes(ref),
             ),
           ],
-          IconButton(
-            icon: const Icon(Icons.list),
-            tooltip: 'Daftar catatan',
-            onPressed: () => context.pop(),
-          ),
         ],
       ),
       body: GraphView(

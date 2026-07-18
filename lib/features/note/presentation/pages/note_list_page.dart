@@ -15,13 +15,6 @@ class NoteListPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MeshDraft'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.hub_outlined),
-            tooltip: 'Graf',
-            onPressed: () => context.push('/graph'),
-          ),
-        ],
       ),
       body: switch (notesAsync) {
         AsyncData(:final value) => value.isEmpty
