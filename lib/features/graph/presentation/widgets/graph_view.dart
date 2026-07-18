@@ -1,10 +1,12 @@
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mesh_draft/features/graph/application/services/graph_layout_service.dart';
 import 'package:mesh_draft/features/graph/presentation/controllers/graph_controller.dart';
+import 'package:mesh_draft/features/note/application/services/note_service.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
 
 /// Ukuran nominal CustomPaint/GestureDetector — sengaja jauh lebih besar dari
@@ -64,9 +66,15 @@ class _GraphViewState extends ConsumerState<GraphView>
   String _topologySignature = '';
   String _labelSignature = '';
   Color _labelColor = const Color(0xFF000000);
-  int _frame = 0;
   bool _userInteracted = false;
   bool _needsInitialFit = true;
+
+  // Interaksi node aktif (grab/drag). Saat tidak null, pan InteractiveViewer
+  // dinonaktifkan supaya tidak bersaing dengan drag node di gesture arena.
+  int? _activePointer;
+  GraphNode? _grabbedNode;
+  Offset _grabDownPosition = Offset.zero;
+  bool _dragConfirmed = false;
 
   @override
   void initState() {
@@ -95,7 +103,6 @@ class _GraphViewState extends ConsumerState<GraphView>
 
   void _onTick() {
     _layout.step();
-    _frame++;
     // Kamera: sekali bingkai penuh saat graf pertama muncul, lalu HANYA zoom-out
     // untuk memuat node yang menyebar — tidak pernah zoom-in saat graf memadat
     // (itu yang terasa "dihisap ke tengah"). Berhenti begitu user pan/zoom.
@@ -106,10 +113,11 @@ class _GraphViewState extends ConsumerState<GraphView>
         _fitCamera(zoomOutOnly: true);
       }
     }
-    // LOG SEMENTARA — verifikasi konvergensi (temp→0, bounds beku, maxSpeed ≠
-    // temp frame sebelumnya). Hapus setelah verifikasi di HP fisik profile mode.
-    if (_frame % 60 == 0) {
-      _logDiagnostics();
+    // Hemat baterai: hentikan ticker begitu simulasi beku dan tidak sedang
+    // drag. Dibangunkan lagi oleh _onPointerMove (drag) atau _applyData
+    // (topologi baru).
+    if (_layout.isConverged && _activePointer == null) {
+      _ticker.stop();
     }
   }
 
@@ -167,27 +175,6 @@ class _GraphViewState extends ConsumerState<GraphView>
       ..scaleByDouble(scale, scale, scale, 1);
   }
 
-  void _logDiagnostics() {
-    if (_layout.nodes.isEmpty) return;
-    var minX = double.infinity;
-    var minY = double.infinity;
-    var maxX = double.negativeInfinity;
-    var maxY = double.negativeInfinity;
-    for (final node in _layout.nodes) {
-      minX = min(minX, node.position.dx);
-      minY = min(minY, node.position.dy);
-      maxX = max(maxX, node.position.dx);
-      maxY = max(maxY, node.position.dy);
-    }
-    debugPrint(
-      'GRAPH SIM: frame=$_frame '
-      'temp=${_layout.temperature.toStringAsFixed(4)} '
-      'maxSpeed=${_layout.lastMaxSpeed.toStringAsFixed(2)} '
-      'maxRawDisp=${_layout.lastMaxRawDisp.toStringAsFixed(2)} '
-      'bounds=${(maxX - minX).toStringAsFixed(0)}x${(maxY - minY).toStringAsFixed(0)}',
-    );
-  }
-
   void _applyData(GraphData data) {
     // Label di-rebuild saat judul atau warna (tema) berubah — bukan tiap build.
     final labelSignature =
@@ -206,7 +193,8 @@ class _GraphViewState extends ConsumerState<GraphView>
 
     _layout.setGraph(
       nodeInputs: [
-        for (final note in data.notes) (id: note.id, x: null, y: null),
+        for (final note in data.notes)
+          (id: note.id, x: note.posX, y: note.posY),
       ],
       edgeInputs: [
         for (final link in data.links)
@@ -247,18 +235,74 @@ class _GraphViewState extends ConsumerState<GraphView>
     }
   }
 
-  void _onTapUp(TapUpDetails details) {
-    // GestureDetector ada DI DALAM InteractiveViewer, jadi localPosition sudah
-    // dalam koordinat "dunia" (sama seperti node.position) — tidak perlu
-    // invert-transform manual.
-    final tapPos = details.localPosition;
-    const tolerance = 8.0;
-    for (final node in _layout.nodes) {
-      if ((node.position - tapPos).distance <= kNodeRadius + tolerance) {
-        widget.onNodeTap(node.id);
+  // Hit-test node dalam koordinat "dunia". Toleransi membesar saat zoom-out
+  // supaya target sentuh di layar tetap masuk akal — node kecil di layar saat
+  // graf di-fit hampir mustahil dikenai kalau toleransinya tetap di ruang dunia.
+  GraphNode? _hitNode(Offset worldPosition) {
+    final scale = _transform.value.getMaxScaleOnAxis();
+    return _layout.nodeAt(worldPosition, tolerance: 28 / scale);
+  }
+
+  // Pointer mendarat: kalau di atas node, klaim gesture ini untuk node (kunci
+  // pan IV lewat setState) — deterministik, tanpa adu menang di gesture arena.
+  // Kalau di area kosong, dibiarkan: InteractiveViewer yang pan.
+  void _onPointerDown(PointerDownEvent event) {
+    if (_activePointer != null) return;
+    final node = _hitNode(_transform.toScene(event.localPosition));
+    if (node == null) return;
+    _activePointer = event.pointer;
+    _grabbedNode = node;
+    _grabDownPosition = event.localPosition;
+    _dragConfirmed = false;
+    setState(() {}); // panEnabled IV → false selama node dipegang
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (event.pointer != _activePointer) return;
+    final node = _grabbedNode!;
+    if (!_dragConfirmed) {
+      // Di bawah touch-slop diperlakukan sebagai tap, bukan drag — node belum
+      // di-pin, jadi tap yang sekadar membuka detail tidak mengunci posisi.
+      if ((event.localPosition - _grabDownPosition).distance <= kTouchSlop) {
         return;
       }
+      _dragConfirmed = true;
+      _userInteracted = true; // hentikan auto-fit kamera supaya tak melawan jari
+      _layout.beginDrag(node);
     }
+    _layout.dragTo(node, _transform.toScene(event.localPosition));
+    if (!_ticker.isAnimating) _ticker.repeat();
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (event.pointer != _activePointer) return;
+    final node = _grabbedNode!;
+    if (_dragConfirmed) {
+      // Node tetap ter-pin di titik lepas; persist posisi supaya jadi jangkar
+      // saat app dibuka ulang. Fire-and-forget: Drift memancarkan daftar baru,
+      // tapi topologi tak berubah jadi setGraph tidak dipanggil ulang.
+      ref.read(noteServiceProvider).updateNotePosition(
+            node.id,
+            x: node.position.dx,
+            y: node.position.dy,
+          );
+    } else {
+      widget.onNodeTap(node.id);
+    }
+    _endPointer();
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    if (event.pointer != _activePointer) return;
+    _endPointer();
+  }
+
+  void _endPointer() {
+    _layout.endDrag(); // keluar mode drag → simulasi normal (momentum) lanjut
+    _activePointer = null;
+    _grabbedNode = null;
+    _dragConfirmed = false;
+    setState(() {}); // panEnabled IV → true lagi
   }
 
   @override
@@ -271,19 +315,27 @@ class _GraphViewState extends ConsumerState<GraphView>
     final data = ref.watch(graphControllerProvider);
     if (data != null) _applyData(data);
 
-    return InteractiveViewer(
-      transformationController: _transform,
-      // Konten (kCanvasSize) jauh lebih besar dari viewport secara sengaja —
-      // constrained:false wajib, kalau tidak InteractiveViewer memaksa canvas
-      // diperas masuk viewport (layar jadi kosong).
-      constrained: false,
-      boundaryMargin: const EdgeInsets.all(double.infinity),
-      minScale: 0.05,
-      maxScale: 5,
-      onInteractionStart: (_) => _userInteracted = true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: _onTapUp,
+    // Listener menerima SEMUA event pointer tanpa ikut gesture arena, jadi drag
+    // node tidak beradu-menang dengan pan/zoom IV (yang non-deterministik).
+    // Saat jari memegang node, panEnabled IV dimatikan sehingga hanya drag node
+    // yang jalan; di area kosong panEnabled aktif dan IV yang pan.
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
+      child: InteractiveViewer(
+        transformationController: _transform,
+        // Konten (kCanvasSize) jauh lebih besar dari viewport secara sengaja —
+        // constrained:false wajib, kalau tidak InteractiveViewer memaksa canvas
+        // diperas masuk viewport (layar jadi kosong).
+        constrained: false,
+        boundaryMargin: const EdgeInsets.all(double.infinity),
+        minScale: 0.05,
+        maxScale: 5,
+        panEnabled: _activePointer == null,
+        onInteractionStart: (_) => _userInteracted = true,
         child: CustomPaint(
           size: const Size(kCanvasSize, kCanvasSize),
           painter: _GraphPainter(

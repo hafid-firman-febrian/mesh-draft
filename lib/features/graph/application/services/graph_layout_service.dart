@@ -18,6 +18,20 @@ const double kIdealDistance = 200;
 // numerik; kForceScale di-tune untuk rasio itu, jadi rasio itu dipertahankan.
 const double kInitialTemperature = kIdealDistance;
 
+// Batas kecepatan node bebas (px/frame) saat ada node lain sedang di-drag.
+// Selama drag node bergerak TANPA momentum (lihat step) supaya tidak bergetar;
+// cap ini hanya mencegah lompatan besar saat node ditarik jauh. Soal rasa —
+// naikkan agar tetangga menyusul lebih gesit, turunkan bila terasa meloncat.
+const double kDragMaxSpeed = 30;
+
+// Fraksi langkah gradient-descent per frame saat mengikuti node yang di-drag.
+// Sengaja kecil: langkah besar membuat node berderajat tinggi (banyak link)
+// melewati titik keseimbangan → sisa getar. kDragMaxSpeed sudah menangani
+// kecepatan saat drag cepat, jadi faktor kecil ini nyaris tak mengurangi
+// responsivitas. Soal rasa — turunkan bila masih ada getar, naikkan bila
+// tetangga terasa lamban menyusul.
+const double kDragFollowFactor = 0.02;
+
 const double kCoolingFactor = 0.98;
 
 const double kTemperatureCutoff = 0.05;
@@ -50,7 +64,9 @@ class GraphNode {
   Offset position;
   Offset velocity = Offset.zero;
 
-  final bool pinned;
+  // Mutable: node bebas dikunci saat di-drag, lalu tetap terkunci di titik
+  // lepas (posisi jadi jangkar untuk simulasi tetangga).
+  bool pinned;
 }
 
 class GraphEdge {
@@ -69,16 +85,15 @@ class GraphLayoutService {
   double _temperature = 0;
   double _idealDistance = 1;
   double _repulsionCutoff = double.infinity;
-  double _lastMaxSpeed = 0;
-  double _lastMaxRawDisp = 0;
+  bool _dragging = false;
+  int _draggedIndex = -1;
+  final Set<int> _draggedNeighbors = {};
 
-  bool get isConverged => _temperature <= 0;
+  // Konvergen = sudah dingin DAN tidak sedang di-drag. Saat drag, meski suhu
+  // nol, simulasi tetap aktif menyusul node yang ditarik.
+  bool get isConverged => _temperature <= 0 && !_dragging;
 
   double get temperature => _temperature;
-
-  double get lastMaxSpeed => _lastMaxSpeed;
-
-  double get lastMaxRawDisp => _lastMaxRawDisp;
 
   void setGraph({
     required List<GraphNodeInput> nodeInputs,
@@ -145,6 +160,48 @@ class GraphLayoutService {
     _temperature = kInitialTemperature;
   }
 
+  GraphNode? nodeAt(Offset worldPosition, {double tolerance = 8}) {
+    final reach = kNodeRadius + tolerance;
+    GraphNode? nearest;
+    var nearestDistance = double.infinity;
+    for (final node in nodes) {
+      final distance = (node.position - worldPosition).distance;
+      if (distance <= reach && distance < nearestDistance) {
+        nearest = node;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  }
+
+  // Mulai men-drag [node]: kunci (velocity nol, tak digerakkan simulasi) dan
+  // aktifkan mode drag. Selama mode ini, node bebas mengikuti TANPA momentum
+  // (anti-getar, lihat step) dan simulasi tetap jalan meski suhu nol.
+  void beginDrag(GraphNode node) {
+    node.pinned = true;
+    node.velocity = Offset.zero;
+    _dragging = true;
+    _draggedIndex = nodes.indexOf(node);
+    _draggedNeighbors.clear();
+    for (final e in edges) {
+      if (e.a == _draggedIndex) _draggedNeighbors.add(e.b);
+      if (e.b == _draggedIndex) _draggedNeighbors.add(e.a);
+    }
+  }
+
+  void endDrag() {
+    _dragging = false;
+    _draggedIndex = -1;
+    _draggedNeighbors.clear();
+  }
+
+  // Tempel node ke posisi jari persis. Tetangga menyusul lewat step() dalam mode
+  // drag (gradient-descent tanpa momentum) — tak boleh reheat di sini: menambah
+  // energi tiap frame justru sumber getaran.
+  void dragTo(GraphNode node, Offset worldPosition) {
+    node.position = worldPosition;
+  }
+
   Offset _spawnPosition(List<GraphNode> placed, double spawnSize) {
     Offset random() => Offset(
       kNodeRadius + _rng.nextDouble() * (spawnSize - 2 * kNodeRadius),
@@ -161,7 +218,9 @@ class GraphLayoutService {
   }
 
   void step() {
-    if (_temperature <= 0) return;
+    // Saat drag, simulasi tetap jalan meski suhu nol supaya tetangga terus
+    // mengikuti node yang ditarik.
+    if (_temperature <= 0 && !_dragging) return;
 
     final n = nodes.length;
     if (n == 0) return;
@@ -195,13 +254,35 @@ class GraphLayoutService {
       disp[e.b] -= pull;
     }
 
-    var maxSpeed = 0.0;
-    var maxRawDisp = 0.0;
     for (var i = 0; i < n; i++) {
-      maxRawDisp = max(maxRawDisp, disp[i].distance);
       final node = nodes[i];
       if (node.pinned) {
         node.velocity = Offset.zero;
+        continue;
+      }
+      if (_dragging) {
+        node.velocity = Offset.zero;
+        // Hanya gerakkan node yang terpengaruh node yang di-drag: tetangga
+        // langsung (edge) atau yang cukup dekat sehingga terdorong repulsi. Graf
+        // membeku di suhu nol, BUKAN di keseimbangan gaya sempurna — sisa gaya
+        // beku itu ada di semua node. Tanpa gate ini, menjalankan step() saat
+        // drag melepas sisa gaya tsb dan node jauh yang tak terkait ikut bergerak.
+        final influenced = _draggedIndex < 0 ||
+            _draggedIndex >= n ||
+            _draggedNeighbors.contains(i) ||
+            (node.position - nodes[_draggedIndex].position).distance <=
+                _repulsionCutoff;
+        if (!influenced) continue;
+        // Gerak TANPA momentum (velocity tak diakumulasi) → gradient-descent satu
+        // langkah, tanpa overshoot/getar. Faktor kecil (kDragFollowFactor)
+        // mencegah node berderajat tinggi overshoot; cap kDragMaxSpeed menahan
+        // lompatan besar saat node ditarik jauh.
+        var move = disp[i] * kDragFollowFactor;
+        final speed = move.distance;
+        if (speed > kDragMaxSpeed) {
+          move = move / speed * kDragMaxSpeed;
+        }
+        node.position += move;
         continue;
       }
       var v = (node.velocity + disp[i] * kForceScale) * kVelocityDamping;
@@ -212,14 +293,16 @@ class GraphLayoutService {
       }
       node.velocity = v;
       node.position += v;
-      maxSpeed = max(maxSpeed, v.distance);
     }
-    _lastMaxSpeed = maxSpeed;
-    _lastMaxRawDisp = maxRawDisp;
 
-    _temperature *= kCoolingFactor;
-    if (_temperature < kTemperatureCutoff) {
-      _temperature = 0;
+    // Cooling hanya saat tidak drag: selama drag suhu dibiarkan (gerak diatur
+    // gradient-descent, bukan suhu), lalu setelah endDrag simulasi normal
+    // melanjutkan cooling ke nol seperti biasa.
+    if (!_dragging) {
+      _temperature *= kCoolingFactor;
+      if (_temperature < kTemperatureCutoff) {
+        _temperature = 0;
+      }
     }
   }
 }
