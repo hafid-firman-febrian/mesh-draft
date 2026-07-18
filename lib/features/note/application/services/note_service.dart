@@ -36,6 +36,15 @@ class NoteService {
     ));
   }
 
+  // Menyimpan posisi node hasil drag. Tanpa validasi judul dan tanpa bump
+  // updatedAt — memindahkan node bukan mengedit isi catatan.
+  Future<void> updateNotePosition(
+    String id, {
+    required double x,
+    required double y,
+  }) =>
+      _repository.updateNotePosition(id, x, y);
+
   Future<void> deleteNote(String id) => _repository.deleteNote(id);
 
   String _validateTitle(String title) {

@@ -11,6 +11,7 @@ abstract class NoteRepository {
   Future<Note?> getNoteById(String id);
   Future<Note> createNote(Note note);
   Future<Note> updateNote(Note note);
+  Future<void> updateNotePosition(String id, double x, double y);
   Future<void> deleteNote(String id);
   Stream<List<Note>> watchAllNotes();
 }
@@ -53,6 +54,10 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
+  Future<void> updateNotePosition(String id, double x, double y) =>
+      _local.updatePosition(id, x, y);
+
+  @override
   Future<void> deleteNote(String id) => _local.deleteNote(id);
 
   Note _toDomain(db.Note row) => Note(
@@ -61,14 +66,20 @@ class NoteRepositoryImpl implements NoteRepository {
         content: row.content,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        posX: row.posX,
+        posY: row.posY,
       );
 
+  // posX/posY ikut disertakan: updateNote memakai replace (mengganti seluruh
+  // baris), jadi tanpa ini mengedit judul akan menghapus posisi hasil drag.
   db.NotesCompanion _toCompanion(Note note) => db.NotesCompanion(
         id: Value(note.id),
         title: Value(note.title),
         content: Value(note.content),
         createdAt: Value(note.createdAt),
         updatedAt: Value(note.updatedAt),
+        posX: Value(note.posX),
+        posY: Value(note.posY),
       );
 }
 

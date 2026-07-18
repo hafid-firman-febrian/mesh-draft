@@ -41,6 +41,14 @@ class NoteLocalDataSource {
   Future<void> deleteNote(String id) async {
     await (_db.delete(_db.notes)..where((tbl) => tbl.id.equals(id))).go();
   }
+
+  // Partial write: hanya posX/posY. Sengaja tidak menyentuh updatedAt supaya
+  // menyeret node di graph tidak mengubah urutan Notes List (yang diurutkan
+  // berdasarkan updatedAt).
+  Future<void> updatePosition(String id, double x, double y) async {
+    await (_db.update(_db.notes)..where((tbl) => tbl.id.equals(id)))
+        .write(NotesCompanion(posX: Value(x), posY: Value(y)));
+  }
 }
 
 @riverpod

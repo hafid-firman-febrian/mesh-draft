@@ -47,6 +47,18 @@ void main() {
     });
   });
 
+  group('updateNotePosition', () {
+    test('meneruskan id dan koordinat ke repository', () async {
+      await service.updateNotePosition('n1', x: 12.5, y: -7.0);
+      expect(repository.lastPositionUpdate, (id: 'n1', x: 12.5, y: -7.0));
+    });
+
+    test('tidak memvalidasi apa pun — hanya persist posisi', () async {
+      await service.updateNotePosition('', x: 0, y: 0);
+      expect(repository.lastPositionUpdate, (id: '', x: 0.0, y: 0.0));
+    });
+  });
+
   group('createNote — perilaku', () {
     test('menghasilkan id non-kosong dan meneruskan note ke repository',
         () async {
@@ -69,11 +81,17 @@ void main() {
 
 class _FakeNoteRepository implements NoteRepository {
   Note? lastCreated;
+  ({String id, double x, double y})? lastPositionUpdate;
 
   @override
   Future<Note> createNote(Note note) async {
     lastCreated = note;
     return note;
+  }
+
+  @override
+  Future<void> updateNotePosition(String id, double x, double y) async {
+    lastPositionUpdate = (id: id, x: x, y: y);
   }
 
   @override

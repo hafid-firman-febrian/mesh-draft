@@ -10,5 +10,7 @@ abstract class Note with _$Note {
     required String content,
     required DateTime createdAt,
     required DateTime updatedAt,
+    double? posX,
+    double? posY,
   }) = _Note;
 }

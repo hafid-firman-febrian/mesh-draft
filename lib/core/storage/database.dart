@@ -13,10 +13,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        // Reset destruktif, bukan migrasi kolom bertahap. MVP local-only: tidak
+        // ada data pengguna yang perlu dipertahankan, jadi penambahan posX/posY
+        // (schemaVersion 2) cukup dengan membangun ulang skema.
+        onUpgrade: (m, from, to) async {
+          for (final table in allTables) {
+            await m.deleteTable(table.actualTableName);
+          }
+          await m.createAll();
+        },
         beforeOpen: (details) async {
           // SQLite menonaktifkan foreign key secara default.
           // Tanpa ini, onDelete: cascade tidak jalan dan link yatim
