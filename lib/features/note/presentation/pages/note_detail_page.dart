@@ -6,13 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:mesh_draft/core/exceptions/validation_exception.dart';
 import 'package:mesh_draft/core/theme/color_tokens.dart';
 import 'package:mesh_draft/core/utils/date_extensions.dart';
+import 'package:mesh_draft/core/widgets/state_views.dart';
 import 'package:mesh_draft/features/link/application/services/link_service.dart';
 import 'package:mesh_draft/features/note/application/services/note_service.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
 import 'package:mesh_draft/features/note/presentation/controllers/note_detail_controller.dart';
 import 'package:mesh_draft/features/note/presentation/widgets/linked_notes_section.dart';
-
-enum _DetailMenuAction { edit, link, delete }
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 class NoteDetailPage extends ConsumerStatefulWidget {
   const NoteDetailPage({super.key, this.noteId, this.autoFocusTitle = false});
@@ -150,37 +150,19 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
       appBar: AppBar(
         actions: [
           if (note != null)
-            PopupMenuButton<_DetailMenuAction>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (action) =>
-                  _handleMenuAction(context, action, linkCount),
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _DetailMenuAction.edit,
-                  child: Text('Edit'),
-                ),
-                PopupMenuItem(
-                  value: _DetailMenuAction.link,
-                  child: Text('Link'),
-                ),
-                PopupMenuItem(
-                  value: _DetailMenuAction.delete,
-                  child: Text('Delete'),
-                ),
-              ],
+            IconButton(
+              icon: const Icon(PhosphorIconsRegular.trash),
+              color: Theme.of(context).colorScheme.error,
+              // PopupMenuItem yang digantikan punya teks 'Delete' yang dibaca
+              // screen reader. Ikon telanjang tanpa tooltip menghapus nama
+              // aksi itu — IconButton.tooltip mengisi Semantics.label sekaligus.
+              tooltip: 'Hapus',
+              onPressed: () => _confirmDelete(context, linkCount),
             ),
         ],
       ),
       body: confirmedError
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(MeshSpacing.lg),
-                child: Text(
-                  'Gagal memuat catatan: ${noteAsync.error}',
-                  style: const TextStyle(color: MeshColors.textSecondary),
-                ),
-              ),
-            )
+          ? ErrorStateView(error: noteAsync.error!)
           : confirmedNotFound
           ? const _NotFound()
           : _buildEditor(context, noteId, note, linkCount),
@@ -269,21 +251,6 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
     if (context.mounted) context.push('/note/$_currentNoteId/link');
   }
 
-  Future<void> _handleMenuAction(
-    BuildContext context,
-    _DetailMenuAction action,
-    int linkCount,
-  ) async {
-    switch (action) {
-      case _DetailMenuAction.edit:
-        _titleFocus.requestFocus();
-      case _DetailMenuAction.link:
-        context.push('/note/$_currentNoteId/link');
-      case _DetailMenuAction.delete:
-        await _confirmDelete(context, linkCount);
-    }
-  }
-
   Future<void> _confirmDelete(BuildContext context, int linkCount) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -301,7 +268,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: MeshColors.danger,
+              backgroundColor: Theme.of(context).colorScheme.error,
               // Tanpa ini label memakai colorScheme.onPrimary turunan seed,
               // yang tidak dijamin kontras terhadap danger.
               foregroundColor: MeshColors.textPrimary,

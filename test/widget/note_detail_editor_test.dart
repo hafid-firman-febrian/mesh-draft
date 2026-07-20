@@ -8,6 +8,7 @@ import 'package:mesh_draft/core/theme/app_theme.dart';
 import 'package:mesh_draft/features/link/data/data_sources/link_local_data_source.dart';
 import 'package:mesh_draft/features/note/data/data_sources/note_local_data_source.dart';
 import 'package:mesh_draft/features/note/presentation/pages/note_detail_page.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 void main() {
   late AppDatabase db;
@@ -22,12 +23,12 @@ void main() {
 
   tearDown(() => db.close());
 
-  Widget buildApp(String? noteId) {
+  Widget buildApp(String? noteId, {bool autoFocusTitle = false}) {
     return ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
       child: MaterialApp(
         theme: AppTheme.dark,
-        home: NoteDetailPage(noteId: noteId),
+        home: NoteDetailPage(noteId: noteId, autoFocusTitle: autoFocusTitle),
       ),
     );
   }
@@ -111,7 +112,11 @@ void main() {
     await disposeApp(tester);
   });
 
-  testWidgets('menu ⋮ Edit memfokuskan field judul', (tester) async {
+  // Jalur "⋮ → Edit" sudah dibuang. Perilaku yang masih hidup adalah
+  // autoFocusTitle, dipakai /create dan ?focus=title dari context menu list.
+  testWidgets('autoFocusTitle memfokuskan field judul saat dibuka', (
+    tester,
+  ) async {
     final now = DateTime(2026, 7, 18, 10);
     await notes.createNote(
       NotesCompanion.insert(
@@ -122,16 +127,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(buildApp('a'));
-    await tester.pumpAndSettle();
-
-    // Pindahkan fokus ke content dulu supaya title jelas belum fokus.
-    await tester.tap(find.byType(TextField).at(1));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.more_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit'));
+    await tester.pumpWidget(buildApp('a', autoFocusTitle: true));
     await tester.pumpAndSettle();
 
     final titleWidget = tester.widget<TextField>(find.byType(TextField).first);
@@ -170,9 +166,7 @@ void main() {
     await tester.pumpWidget(buildApp('a'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.more_vert));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.byIcon(PhosphorIconsRegular.trash));
     await tester.pumpAndSettle();
 
     expect(
@@ -193,9 +187,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // "UI sudah siap" — meta & shell Linked Notes tampil sejak awal,
-      // walau catatan belum pernah tersimpan. Cuma menu ⋮ yang menunggu
-      // catatan benar-benar ada (Delete/Link butuh id nyata).
-      expect(find.byIcon(Icons.more_vert), findsNothing);
+      // walau catatan belum pernah tersimpan. Cuma ikon hapus yang menunggu
+      // catatan benar-benar ada (butuh id nyata).
+      expect(find.byIcon(PhosphorIconsRegular.trash), findsNothing);
       expect(find.text('0 karakter · 0 link'), findsOneWidget);
       expect(find.text('LINKED NOTES · 0'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
@@ -216,9 +210,9 @@ void main() {
       expect(all, hasLength(1));
       expect(all.single.title, 'Catatan baru');
 
-      // Begitu tersimpan, halaman bertransisi ke mode edit — menu ⋮ muncul,
-      // TextField tidak berkurang, dan fokus judul tidak hilang.
-      expect(find.byIcon(Icons.more_vert), findsOneWidget);
+      // Begitu tersimpan, halaman bertransisi ke mode edit — ikon hapus
+      // muncul, TextField tidak berkurang, dan fokus judul tidak hilang.
+      expect(find.byIcon(PhosphorIconsRegular.trash), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.byType(TextField), findsNWidgets(2));
       final titleWidget = tester.widget<TextField>(titleField);
