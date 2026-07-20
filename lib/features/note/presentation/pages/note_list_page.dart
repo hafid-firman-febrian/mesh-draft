@@ -86,8 +86,13 @@ class NoteListPage extends ConsumerWidget {
           gridArea = _NotesGrid(
             notes: filtered,
             linkCounts: linkCounts,
-            onLongPressNote: (note, position) =>
-                _showContextMenu(context, ref, note, position),
+            onLongPressNote: (note, position) => _showContextMenu(
+              context,
+              ref,
+              note,
+              position,
+              linkCounts[note.id] ?? 0,
+            ),
           );
         }
       }
@@ -116,6 +121,7 @@ class NoteListPage extends ConsumerWidget {
     WidgetRef ref,
     Note note,
     Offset position,
+    int linkCount,
   ) async {
     final selected = await showMenu<_NoteMenuAction>(
       context: context,
@@ -145,7 +151,7 @@ class NoteListPage extends ConsumerWidget {
       case _NoteMenuAction.copy:
         await _copyTitle(context, note);
       case _NoteMenuAction.delete:
-        await _confirmDelete(context, ref, note);
+        await _confirmDelete(context, ref, note, linkCount);
     }
   }
 
@@ -164,12 +170,17 @@ class NoteListPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Note note,
+    int linkCount,
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Hapus catatan?'),
-        content: const Text('Tindakan ini tidak dapat dibatalkan.'),
+        content: Text(
+          linkCount > 0
+              ? 'Tindakan ini permanen. $linkCount link ikut terhapus.'
+              : 'Tindakan ini permanen.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -177,7 +188,7 @@ class NoteListPage extends ConsumerWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: MeshColors.danger,
+              backgroundColor: Theme.of(context).colorScheme.error,
               // Tanpa ini label memakai colorScheme.onPrimary turunan seed,
               // yang tidak dijamin kontras terhadap danger.
               foregroundColor: MeshColors.textPrimary,
