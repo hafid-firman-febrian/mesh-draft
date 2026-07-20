@@ -17,28 +17,40 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('hapus catatan → link yang melibatkannya ikut terhapus (cascade)',
-      () async {
-    final now = DateTime.now();
-    await notes.createNote(
-      NotesCompanion.insert(id: 'a', title: 'A', createdAt: now, updatedAt: now),
-    );
-    await notes.createNote(
-      NotesCompanion.insert(id: 'b', title: 'B', createdAt: now, updatedAt: now),
-    );
-    await links.createLink(
-      NoteLinksCompanion.insert(
-        id: 'l1',
-        sourceId: 'a',
-        targetId: 'b',
-        createdAt: now,
-      ),
-    );
+  test(
+    'hapus catatan → link yang melibatkannya ikut terhapus (cascade)',
+    () async {
+      final now = DateTime.now();
+      await notes.createNote(
+        NotesCompanion.insert(
+          id: 'a',
+          title: 'A',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await notes.createNote(
+        NotesCompanion.insert(
+          id: 'b',
+          title: 'B',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await links.createLink(
+        NoteLinksCompanion.insert(
+          id: 'l1',
+          sourceId: 'a',
+          targetId: 'b',
+          createdAt: now,
+        ),
+      );
 
-    expect(await links.linkExists('a', 'b'), isTrue);
+      expect(await links.linkExists('a', 'b'), isTrue);
 
-    await notes.deleteNote('a');
+      await notes.deleteNote('a');
 
-    expect(await links.linkExists('a', 'b'), isFalse);
-  });
+      expect(await links.linkExists('a', 'b'), isFalse);
+    },
+  );
 }

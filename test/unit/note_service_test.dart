@@ -60,12 +60,14 @@ void main() {
   });
 
   group('createNote — perilaku', () {
-    test('menghasilkan id non-kosong dan meneruskan note ke repository',
-        () async {
-      final note = await service.createNote(title: 'Judul');
-      expect(note.id, isNotEmpty);
-      expect(repository.lastCreated, note);
-    });
+    test(
+      'menghasilkan id non-kosong dan meneruskan note ke repository',
+      () async {
+        final note = await service.createNote(title: 'Judul');
+        expect(note.id, isNotEmpty);
+        expect(repository.lastCreated, note);
+      },
+    );
 
     test('content default kosong bila tidak diisi', () async {
       final note = await service.createNote(title: 'Judul');
@@ -108,4 +110,8 @@ class _FakeNoteRepository implements NoteRepository {
 
   @override
   Stream<List<Note>> watchAllNotes() => throw UnimplementedError();
+
+  @override
+  Stream<List<Note>> watchNotesSearch(String query) =>
+      throw UnimplementedError();
 }

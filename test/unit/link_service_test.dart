@@ -54,8 +54,7 @@ class _FakeLinkRepository implements LinkRepository {
 
   @override
   Future<bool> linkExists(String sourceId, String targetId) async {
-    return links
-        .any((l) => l.sourceId == sourceId && l.targetId == targetId);
+    return links.any((l) => l.sourceId == sourceId && l.targetId == targetId);
   }
 
   @override

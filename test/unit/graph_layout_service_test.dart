@@ -90,46 +90,50 @@ void main() {
     expect(service.nodeAt(const Offset(900, 900)), isNull);
   });
 
-  test('beginDrag membekukan node dan membangunkan simulasi yang sudah beku',
-      () {
-    final service = GraphLayoutService();
-    service.setGraph(
-      nodeInputs: [_free('a'), _free('b')],
-      edgeInputs: [(sourceId: 'a', targetId: 'b')],
-    );
-    for (var i = 0; i < 600; i++) {
-      service.step();
-    }
-    expect(service.isConverged, isTrue);
+  test(
+    'beginDrag membekukan node dan membangunkan simulasi yang sudah beku',
+    () {
+      final service = GraphLayoutService();
+      service.setGraph(
+        nodeInputs: [_free('a'), _free('b')],
+        edgeInputs: [(sourceId: 'a', targetId: 'b')],
+      );
+      for (var i = 0; i < 600; i++) {
+        service.step();
+      }
+      expect(service.isConverged, isTrue);
 
-    final a = service.nodes.firstWhere((n) => n.id == 'a');
-    service.beginDrag(a);
+      final a = service.nodes.firstWhere((n) => n.id == 'a');
+      service.beginDrag(a);
 
-    expect(a.pinned, isTrue);
-    expect(a.velocity, Offset.zero);
-    expect(service.isConverged, isFalse);
-  });
+      expect(a.pinned, isTrue);
+      expect(a.velocity, Offset.zero);
+      expect(service.isConverged, isFalse);
+    },
+  );
 
-  test('dragTo menempatkan node persis di posisi jari dan menahannya di sana',
-      () {
-    final service = GraphLayoutService();
-    service.setGraph(
-      nodeInputs: [_free('a'), _free('b'), _free('c')],
-      edgeInputs: [
-        (sourceId: 'a', targetId: 'b'),
-        (sourceId: 'a', targetId: 'c'),
-      ],
-    );
+  test(
+    'dragTo menempatkan node persis di posisi jari dan menahannya di sana',
+    () {
+      final service = GraphLayoutService();
+      service.setGraph(
+        nodeInputs: [_free('a'), _free('b'), _free('c')],
+        edgeInputs: [
+          (sourceId: 'a', targetId: 'b'),
+          (sourceId: 'a', targetId: 'c'),
+        ],
+      );
 
-    final a = service.nodes.firstWhere((n) => n.id == 'a');
-    service.beginDrag(a);
-    service.dragTo(a, const Offset(1234, 5678));
+      final a = service.nodes.firstWhere((n) => n.id == 'a');
+      service.beginDrag(a);
+      service.dragTo(a, const Offset(1234, 5678));
 
-    for (var i = 0; i < 300; i++) {
-      service.step();
-    }
-    expect(a.position, const Offset(1234, 5678));
-  });
+      for (var i = 0; i < 300; i++) {
+        service.step();
+      }
+      expect(a.position, const Offset(1234, 5678));
+    },
+  );
 
   test('mode drag: node bebas bergerak tanpa momentum (anti-getar)', () {
     final service = GraphLayoutService();
@@ -156,39 +160,44 @@ void main() {
     }
   });
 
-  test('drag hanya menggerakkan node terpengaruh — node jauh tak terhubung diam',
-      () {
-    final service = GraphLayoutService();
-    service.setGraph(
-      nodeInputs: [_free('a'), _free('b'), _free('far'), _free('farBuddy')],
-      edgeInputs: [
-        (sourceId: 'a', targetId: 'b'),
-        (sourceId: 'far', targetId: 'farBuddy'),
-      ],
-    );
-    final a = service.nodes.firstWhere((n) => n.id == 'a');
-    final b = service.nodes.firstWhere((n) => n.id == 'b');
-    final far = service.nodes.firstWhere((n) => n.id == 'far');
-    final farBuddy = service.nodes.firstWhere((n) => n.id == 'farBuddy');
+  test(
+    'drag hanya menggerakkan node terpengaruh — node jauh tak terhubung diam',
+    () {
+      final service = GraphLayoutService();
+      service.setGraph(
+        nodeInputs: [_free('a'), _free('b'), _free('far'), _free('farBuddy')],
+        edgeInputs: [
+          (sourceId: 'a', targetId: 'b'),
+          (sourceId: 'far', targetId: 'farBuddy'),
+        ],
+      );
+      final a = service.nodes.firstWhere((n) => n.id == 'a');
+      final b = service.nodes.firstWhere((n) => n.id == 'b');
+      final far = service.nodes.firstWhere((n) => n.id == 'far');
+      final farBuddy = service.nodes.firstWhere((n) => n.id == 'farBuddy');
 
-    // a-b dekat origin; far-farBuddy jauh dan pada jarak tak seimbang, jadi
-    // 'far' punya sisa gaya sendiri (uji bahwa gate membekukannya, bukan sekadar
-    // gaya nol).
-    a.position = const Offset(0, 0);
-    b.position = const Offset(100, 0);
-    far.position = const Offset(5000, 5000);
-    farBuddy.position = const Offset(5000, 5100);
+      // a-b dekat origin; far-farBuddy jauh dan pada jarak tak seimbang, jadi
+      // 'far' punya sisa gaya sendiri (uji bahwa gate membekukannya, bukan sekadar
+      // gaya nol).
+      a.position = const Offset(0, 0);
+      b.position = const Offset(100, 0);
+      far.position = const Offset(5000, 5000);
+      farBuddy.position = const Offset(5000, 5100);
 
-    service.beginDrag(a);
-    final farBefore = far.position;
-    for (var i = 0; i < 30; i++) {
-      service.dragTo(a, const Offset(20, 0));
-      service.step();
-    }
+      service.beginDrag(a);
+      final farBefore = far.position;
+      for (var i = 0; i < 30; i++) {
+        service.dragTo(a, const Offset(20, 0));
+        service.step();
+      }
 
-    expect(far.position, farBefore); // jauh & tak terhubung ke 'a' → beku
-    expect(b.position, isNot(const Offset(100, 0))); // tetangga 'a' → bergerak
-  });
+      expect(far.position, farBefore); // jauh & tak terhubung ke 'a' → beku
+      expect(
+        b.position,
+        isNot(const Offset(100, 0)),
+      ); // tetangga 'a' → bergerak
+    },
+  );
 
   test('tetangga bereaksi saat node di-drag menjauh', () {
     final service = GraphLayoutService();

@@ -18,13 +18,15 @@ void main() {
 
   Future<Note> seed() {
     final now = DateTime(2026, 7, 18, 10);
-    return repository.createNote(Note(
-      id: 'n1',
-      title: 'Catatan',
-      content: '',
-      createdAt: now,
-      updatedAt: now,
-    ));
+    return repository.createNote(
+      Note(
+        id: 'n1',
+        title: 'Catatan',
+        content: '',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
   }
 
   test('posX/posY null saat catatan baru dibuat', () async {
@@ -33,17 +35,19 @@ void main() {
     expect(note.posY, isNull);
   });
 
-  test('updateNotePosition menyimpan posX/posY dan tidak mengubah updatedAt',
-      () async {
-    final created = await seed();
+  test(
+    'updateNotePosition menyimpan posX/posY dan tidak mengubah updatedAt',
+    () async {
+      final created = await seed();
 
-    await repository.updateNotePosition('n1', 120.5, -80.25);
+      await repository.updateNotePosition('n1', 120.5, -80.25);
 
-    final reloaded = await repository.getNoteById('n1');
-    expect(reloaded!.posX, 120.5);
-    expect(reloaded.posY, -80.25);
-    expect(reloaded.updatedAt, created.updatedAt);
-  });
+      final reloaded = await repository.getNoteById('n1');
+      expect(reloaded!.posX, 120.5);
+      expect(reloaded.posY, -80.25);
+      expect(reloaded.updatedAt, created.updatedAt);
+    },
+  );
 
   test('mengedit catatan mempertahankan posX/posY hasil drag', () async {
     await seed();
