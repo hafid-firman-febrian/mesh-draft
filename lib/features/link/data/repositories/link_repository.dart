@@ -16,22 +16,20 @@ abstract class LinkRepository {
 
 class LinkRepositoryImpl implements LinkRepository {
   LinkRepositoryImpl({required LinkLocalDataSource localDataSource})
-      : _local = localDataSource;
+    : _local = localDataSource;
 
   final LinkLocalDataSource _local;
 
   @override
   Stream<List<NoteLink>> watchAllLinks() {
-    return _local.watchAllLinks().map(
-          (rows) => rows.map(_toDomain).toList(),
-        );
+    return _local.watchAllLinks().map((rows) => rows.map(_toDomain).toList());
   }
 
   @override
   Stream<List<NoteLink>> watchLinksForNote(String noteId) {
-    return _local.watchLinksForNote(noteId).map(
-          (rows) => rows.map(_toDomain).toList(),
-        );
+    return _local
+        .watchLinksForNote(noteId)
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
   @override
@@ -48,18 +46,18 @@ class LinkRepositoryImpl implements LinkRepository {
   Future<void> deleteLink(String id) => _local.deleteLink(id);
 
   NoteLink _toDomain(db.NoteLink row) => NoteLink(
-        id: row.id,
-        sourceId: row.sourceId,
-        targetId: row.targetId,
-        createdAt: row.createdAt,
-      );
+    id: row.id,
+    sourceId: row.sourceId,
+    targetId: row.targetId,
+    createdAt: row.createdAt,
+  );
 
   db.NoteLinksCompanion _toCompanion(NoteLink link) => db.NoteLinksCompanion(
-        id: Value(link.id),
-        sourceId: Value(link.sourceId),
-        targetId: Value(link.targetId),
-        createdAt: Value(link.createdAt),
-      );
+    id: Value(link.id),
+    sourceId: Value(link.sourceId),
+    targetId: Value(link.targetId),
+    createdAt: Value(link.createdAt),
+  );
 }
 
 @riverpod

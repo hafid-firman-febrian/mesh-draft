@@ -3,30 +3,32 @@ import 'package:flutter/material.dart';
 class MeshColors {
   MeshColors._();
 
-  // Canvas
-  static const canvas = Color(0xFF000000);
+  static const canvas = Color(0xFF2B2A2A);
 
-  // Surface — teal transparan di atas hitam.
-  // 0x59 = 35% alpha. Border WAJIB menyertainya (surface terlalu tipis
-  // untuk terbaca sebagai kartu tanpa garis tepi).
-  static const surface = Color(0x59233D4D); // rgba(35,61,77,0.35)
-  static const surfaceBorder = Color(0x802E4E60); // rgba(46,78,96,0.5)
-  static const surfaceActive = Color(0xFF2E4E60); // solid — chip aktif, ditekan
+  static const canvasBorder = Color(0xFF877B67);
 
-  // FAB — solid, menonjol dari canvas
-  static const fab = Color(0xFF233D4D);
+  static const surface = Color(0xFFD8CFBB);
+  static const surfaceBorder = Color(0xFF776B55);
 
-  // Teks
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF9BA8B0);
-  static const textMuted = Color(0xFF6E808B);
+  static const fab = Color(0xFFD9614F);
 
-  // Graph
-  static const node = Color(0xFFEAECF0);
-  static const edge = Color(0xFF9BA8B0);
+  static const sheetBackground = Color(0xFF1B1712);
 
-  // Danger — SATU-SATUNYA warna dari luar palet, khusus delete
-  static const danger = Color(0xFFEF4444);
+  static const textPrimary = Color(0xFFEDE6D6);
+  static const textSecondary = Color(0xFFA89C89);
+
+  static const textMuted = Color(0xFF9C9184);
+
+  static const inkPrimary = Color(0xFF241F17);
+  static const inkSecondary = Color(0xFF5A5044);
+  static const inkMuted = Color(0xFF584F41);
+
+  static const node = Color(0xFFEDE6D6);
+  static const edge = Color(0xFFA89C89);
+
+  static const badgeSurface = Color(0x29241F17);
+
+  static const danger = Color(0xFFB82828);
 }
 
 class MeshSpacing {

@@ -19,21 +19,22 @@ class NoteService {
   Future<Note> createNote({required String title, String content = ''}) {
     final trimmed = _validateTitle(title);
     final now = DateTime.now();
-    return _repository.createNote(Note(
-      id: _uuid.v4(),
-      title: trimmed,
-      content: content,
-      createdAt: now,
-      updatedAt: now,
-    ));
+    return _repository.createNote(
+      Note(
+        id: _uuid.v4(),
+        title: trimmed,
+        content: content,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
   }
 
   Future<Note> updateNote(Note note) {
     final trimmed = _validateTitle(note.title);
-    return _repository.updateNote(note.copyWith(
-      title: trimmed,
-      updatedAt: DateTime.now(),
-    ));
+    return _repository.updateNote(
+      note.copyWith(title: trimmed, updatedAt: DateTime.now()),
+    );
   }
 
   // Menyimpan posisi node hasil drag. Tanpa validasi judul dan tanpa bump
@@ -42,8 +43,7 @@ class NoteService {
     String id, {
     required double x,
     required double y,
-  }) =>
-      _repository.updateNotePosition(id, x, y);
+  }) => _repository.updateNotePosition(id, x, y);
 
   Future<void> deleteNote(String id) => _repository.deleteNote(id);
 

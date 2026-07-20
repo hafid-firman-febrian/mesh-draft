@@ -267,7 +267,8 @@ class GraphLayoutService {
         // membeku di suhu nol, BUKAN di keseimbangan gaya sempurna — sisa gaya
         // beku itu ada di semua node. Tanpa gate ini, menjalankan step() saat
         // drag melepas sisa gaya tsb dan node jauh yang tak terkait ikut bergerak.
-        final influenced = _draggedIndex < 0 ||
+        final influenced =
+            _draggedIndex < 0 ||
             _draggedIndex >= n ||
             _draggedNeighbors.contains(i) ||
             (node.position - nodes[_draggedIndex].position).distance <=

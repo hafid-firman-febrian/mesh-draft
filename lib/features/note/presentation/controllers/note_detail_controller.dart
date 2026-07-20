@@ -22,9 +22,9 @@ class NoteDetailController extends _$NoteDetailController {
   }) async {
     final current = state.value;
     if (current == null) return;
-    await ref.read(noteServiceProvider).updateNote(
-          current.copyWith(title: title, content: content),
-        );
+    await ref
+        .read(noteServiceProvider)
+        .updateNote(current.copyWith(title: title, content: content));
   }
 
   Future<void> deleteNote() async {

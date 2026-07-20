@@ -1,3 +1,5 @@
+import 'package:mesh_draft/features/link/application/services/link_service.dart';
+import 'package:mesh_draft/features/link/domain/models/note_link_model.dart';
 import 'package:mesh_draft/features/note/application/services/note_service.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -10,11 +12,9 @@ class NoteListController extends _$NoteListController {
   Stream<List<Note>> build() {
     return ref.watch(noteServiceProvider).watchAllNotes();
   }
+}
 
-  Future<void> createNote({required String title, String content = ''}) {
-    return ref.read(noteServiceProvider).createNote(
-          title: title,
-          content: content,
-        );
-  }
+@riverpod
+Stream<List<NoteLink>> allNoteLinks(Ref ref) {
+  return ref.watch(linkServiceProvider).watchAllLinks();
 }

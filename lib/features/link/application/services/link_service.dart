@@ -24,22 +24,22 @@ class LinkService {
       );
     }
 
-    // Normalisasi urutan: id lebih kecil selalu jadi source. Tanpa ini
-    // A→B dan B→A tersimpan sebagai dua baris berbeda padahal semantiknya
-    // sama, dan UNIQUE(source_id, target_id) tidak menangkapnya.
-    final (source, target) =
-        noteA.compareTo(noteB) < 0 ? (noteA, noteB) : (noteB, noteA);
+    final (source, target) = noteA.compareTo(noteB) < 0
+        ? (noteA, noteB)
+        : (noteB, noteA);
 
     if (await _repository.linkExists(source, target)) {
       throw const ValidationException('Link sudah ada');
     }
 
-    return _repository.createLink(NoteLink(
-      id: _uuid.v4(),
-      sourceId: source,
-      targetId: target,
-      createdAt: DateTime.now(),
-    ));
+    return _repository.createLink(
+      NoteLink(
+        id: _uuid.v4(),
+        sourceId: source,
+        targetId: target,
+        createdAt: DateTime.now(),
+      ),
+    );
   }
 
   Future<void> deleteLink(String id) => _repository.deleteLink(id);

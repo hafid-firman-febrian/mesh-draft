@@ -15,16 +15,19 @@ class LinkLocalDataSource {
   }
 
   Stream<List<NoteLink>> watchLinksForNote(String noteId) {
-    return (_db.select(_db.noteLinks)
-          ..where((tbl) => tbl.sourceId.equals(noteId) | tbl.targetId.equals(noteId)))
+    return (_db.select(_db.noteLinks)..where(
+          (tbl) => tbl.sourceId.equals(noteId) | tbl.targetId.equals(noteId),
+        ))
         .watch();
   }
 
   Future<bool> linkExists(String sourceId, String targetId) async {
-    final row = await (_db.select(_db.noteLinks)
-          ..where((tbl) =>
-              tbl.sourceId.equals(sourceId) & tbl.targetId.equals(targetId)))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.noteLinks)..where(
+              (tbl) =>
+                  tbl.sourceId.equals(sourceId) & tbl.targetId.equals(targetId),
+            ))
+            .getSingleOrNull();
     return row != null;
   }
 

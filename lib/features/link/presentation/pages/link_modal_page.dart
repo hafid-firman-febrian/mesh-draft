@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mesh_draft/core/exceptions/validation_exception.dart';
+import 'package:mesh_draft/core/widgets/modal_sheet_page.dart';
 import 'package:mesh_draft/core/theme/color_tokens.dart';
 import 'package:mesh_draft/features/link/application/services/link_service.dart';
 import 'package:mesh_draft/features/link/domain/models/note_link_model.dart';
@@ -25,9 +26,29 @@ class LinkModalPage extends ConsumerWidget {
     final notesAsync = ref.watch(linkableNotesProvider);
     final linksAsync = ref.watch(noteLinksProvider(noteId));
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tautkan Catatan')),
-      body: _body(context, ref, notesAsync, linksAsync),
+    return ModalSheet(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              MeshSpacing.lg,
+              MeshSpacing.sm,
+              MeshSpacing.lg,
+              MeshSpacing.sm,
+            ),
+            child: Text(
+              'Tautkan Catatan',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: MeshColors.textPrimary,
+              ),
+            ),
+          ),
+          Expanded(child: _body(context, ref, notesAsync, linksAsync)),
+        ],
+      ),
     );
   }
 
@@ -69,16 +90,10 @@ class LinkModalPage extends ConsumerWidget {
         final note = others[index];
         final alreadyLinked = linkedIds.contains(note.id);
         return ListTile(
-          title: Text(
-            note.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis),
           trailing: Icon(
             alreadyLinked ? Icons.check_circle : Icons.add_circle_outline,
-            color: alreadyLinked
-                ? Theme.of(context).colorScheme.primary
-                : null,
+            color: alreadyLinked ? Theme.of(context).colorScheme.primary : null,
           ),
           enabled: !alreadyLinked,
           onTap: alreadyLinked ? null : () => _link(context, ref, note),
@@ -91,15 +106,15 @@ class LinkModalPage extends ConsumerWidget {
     try {
       await ref.read(linkServiceProvider).createLink(noteId, note.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ditautkan ke "${note.title}"')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ditautkan ke "${note.title}"')));
       }
     } on ValidationException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }

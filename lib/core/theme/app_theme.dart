@@ -5,14 +5,15 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get dark {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: MeshColors.fab,
-      brightness: Brightness.dark,
-    ).copyWith(
-      surface: MeshColors.canvas,
-      onSurface: MeshColors.textPrimary,
-      error: MeshColors.danger,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: MeshColors.fab,
+          brightness: Brightness.dark,
+        ).copyWith(
+          surface: MeshColors.canvas,
+          onSurface: MeshColors.textPrimary,
+          error: MeshColors.danger,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -22,12 +23,10 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
+
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: MeshColors.fab,
-        foregroundColor: MeshColors.textPrimary,
-        elevation: 4,
       ),
     );
   }

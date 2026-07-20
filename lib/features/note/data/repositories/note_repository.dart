@@ -14,11 +14,12 @@ abstract class NoteRepository {
   Future<void> updateNotePosition(String id, double x, double y);
   Future<void> deleteNote(String id);
   Stream<List<Note>> watchAllNotes();
+  Stream<List<Note>> watchNotesSearch(String query);
 }
 
 class NoteRepositoryImpl implements NoteRepository {
   NoteRepositoryImpl({required NoteLocalDataSource localDataSource})
-      : _local = localDataSource;
+    : _local = localDataSource;
 
   final NoteLocalDataSource _local;
 
@@ -30,9 +31,14 @@ class NoteRepositoryImpl implements NoteRepository {
 
   @override
   Stream<List<Note>> watchAllNotes() {
-    return _local.watchAllNotes().map(
-          (rows) => rows.map(_toDomain).toList(),
-        );
+    return _local.watchAllNotes().map((rows) => rows.map(_toDomain).toList());
+  }
+
+  @override
+  Stream<List<Note>> watchNotesSearch(String query) {
+    return _local
+        .watchNotesSearch(query)
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
   @override
@@ -61,26 +67,26 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> deleteNote(String id) => _local.deleteNote(id);
 
   Note _toDomain(db.Note row) => Note(
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        posX: row.posX,
-        posY: row.posY,
-      );
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    posX: row.posX,
+    posY: row.posY,
+  );
 
   // posX/posY ikut disertakan: updateNote memakai replace (mengganti seluruh
   // baris), jadi tanpa ini mengedit judul akan menghapus posisi hasil drag.
   db.NotesCompanion _toCompanion(Note note) => db.NotesCompanion(
-        id: Value(note.id),
-        title: Value(note.title),
-        content: Value(note.content),
-        createdAt: Value(note.createdAt),
-        updatedAt: Value(note.updatedAt),
-        posX: Value(note.posX),
-        posY: Value(note.posY),
-      );
+    id: Value(note.id),
+    title: Value(note.title),
+    content: Value(note.content),
+    createdAt: Value(note.createdAt),
+    updatedAt: Value(note.updatedAt),
+    posX: Value(note.posX),
+    posY: Value(note.posY),
+  );
 }
 
 @riverpod

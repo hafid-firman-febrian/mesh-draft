@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mesh_draft/core/widgets/mesh_nav_bar.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -10,24 +11,13 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
+      bottomNavigationBar: MeshNavBar(
+        currentIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => navigationShell.goBranch(
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.list_outlined),
-            selectedIcon: Icon(Icons.list),
-            label: 'Notes',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.hub_outlined),
-            selectedIcon: Icon(Icons.hub),
-            label: 'Graph',
-          ),
-        ],
+        onCreatePressed: () => context.push('/create'),
       ),
     );
   }

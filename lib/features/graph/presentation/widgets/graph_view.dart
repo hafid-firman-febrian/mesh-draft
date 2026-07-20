@@ -4,6 +4,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mesh_draft/core/theme/color_tokens.dart';
 import 'package:mesh_draft/features/graph/application/services/graph_layout_service.dart';
 import 'package:mesh_draft/features/graph/presentation/controllers/graph_controller.dart';
 import 'package:mesh_draft/features/note/application/services/note_service.dart';
@@ -29,14 +30,19 @@ Matrix4 fitToViewportTransform({
   const padding = 48.0;
   final contentWidth = (maxX - minX) + 2 * (kNodeRadius + padding);
   final contentHeight = (maxY - minY) + 2 * (kNodeRadius + padding);
-  final scale = min(viewport.width / contentWidth, viewport.height / contentHeight)
-      .clamp(0.05, 1.0)
-      .toDouble();
+  final scale = min(
+    viewport.width / contentWidth,
+    viewport.height / contentHeight,
+  ).clamp(0.05, 1.0).toDouble();
   final centerX = (minX + maxX) / 2;
   final centerY = (minY + maxY) / 2;
   return Matrix4.identity()
     ..translateByDouble(
-        viewport.width / 2 - scale * centerX, viewport.height / 2 - scale * centerY, 0, 1)
+      viewport.width / 2 - scale * centerX,
+      viewport.height / 2 - scale * centerY,
+      0,
+      1,
+    )
     ..scaleByDouble(scale, scale, scale, 1);
 }
 
@@ -60,8 +66,9 @@ class _GraphViewState extends ConsumerState<GraphView>
   // renderBox.size. Frame pertama bisa melaporkan viewport (0,0) dan meracuni
   // transform permanen (bug yang ditemukan di spike); scale tetap menghindari
   // kelas masalah itu.
-  final TransformationController _transform =
-      TransformationController(Matrix4.identity()..scaleByDouble(0.3, 0.3, 0.3, 1));
+  final TransformationController _transform = TransformationController(
+    Matrix4.identity()..scaleByDouble(0.3, 0.3, 0.3, 1),
+  );
 
   String _topologySignature = '';
   String _labelSignature = '';
@@ -83,12 +90,10 @@ class _GraphViewState extends ConsumerState<GraphView>
     // dipakai, hanya callback tiap frame untuk 1 langkah simulasi. Juga dipakai
     // sebagai `repaint:` CustomPaint supaya repaint terjadi tanpa setState()
     // (tanpa rebuild widget tree tiap frame).
-    _ticker = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )
-      ..addListener(_onTick)
-      ..repeat();
+    _ticker =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1))
+          ..addListener(_onTick)
+          ..repeat();
   }
 
   @override
@@ -267,7 +272,8 @@ class _GraphViewState extends ConsumerState<GraphView>
         return;
       }
       _dragConfirmed = true;
-      _userInteracted = true; // hentikan auto-fit kamera supaya tak melawan jari
+      _userInteracted =
+          true; // hentikan auto-fit kamera supaya tak melawan jari
       _layout.beginDrag(node);
     }
     _layout.dragTo(node, _transform.toScene(event.localPosition));
@@ -281,7 +287,9 @@ class _GraphViewState extends ConsumerState<GraphView>
       // Node tetap ter-pin di titik lepas; persist posisi supaya jadi jangkar
       // saat app dibuka ulang. Fire-and-forget: Drift memancarkan daftar baru,
       // tapi topologi tak berubah jadi setGraph tidak dipanggil ulang.
-      ref.read(noteServiceProvider).updateNotePosition(
+      ref
+          .read(noteServiceProvider)
+          .updateNotePosition(
             node.id,
             x: node.position.dx,
             y: node.position.dy,
@@ -341,8 +349,8 @@ class _GraphViewState extends ConsumerState<GraphView>
           painter: _GraphPainter(
             layout: _layout,
             labels: _labels,
-            nodeColor: scheme.primary,
-            edgeColor: scheme.secondary,
+            nodeColor: MeshColors.node,
+            edgeColor: MeshColors.edge,
             repaint: _ticker,
           ),
         ),

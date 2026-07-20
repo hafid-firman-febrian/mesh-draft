@@ -7,9 +7,6 @@ class Notes extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
-  // Posisi node hasil drag di graph. Null = belum pernah diatur user →
-  // posisinya dihitung force simulation. Non-null → dipakai sebagai posisi
-  // awal dan di-pin (tidak digerakkan simulasi).
   RealColumn get posX => real().nullable()();
   RealColumn get posY => real().nullable()();
 
@@ -30,6 +27,6 @@ class NoteLinks extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {sourceId, targetId},
-      ];
+    {sourceId, targetId},
+  ];
 }

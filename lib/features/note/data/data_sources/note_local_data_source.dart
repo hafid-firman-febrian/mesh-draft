@@ -11,20 +11,29 @@ class NoteLocalDataSource {
   final AppDatabase _db;
 
   Future<List<Note>> getAllNotes() {
-    return (_db.select(_db.notes)
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.updatedAt)]))
-        .get();
+    return (_db.select(
+      _db.notes,
+    )..orderBy([(tbl) => OrderingTerm.desc(tbl.updatedAt)])).get();
   }
 
   Stream<List<Note>> watchAllNotes() {
+    return (_db.select(
+      _db.notes,
+    )..orderBy([(tbl) => OrderingTerm.desc(tbl.updatedAt)])).watch();
+  }
+
+  Stream<List<Note>> watchNotesSearch(String query) {
+    final pattern = '%$query%';
     return (_db.select(_db.notes)
+          ..where((tbl) => tbl.title.like(pattern) | tbl.content.like(pattern))
           ..orderBy([(tbl) => OrderingTerm.desc(tbl.updatedAt)]))
         .watch();
   }
 
   Future<Note?> getNoteById(String id) {
-    return (_db.select(_db.notes)..where((tbl) => tbl.id.equals(id)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.notes,
+    )..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
 
   Future<Note> createNote(NotesCompanion note) {
@@ -46,8 +55,9 @@ class NoteLocalDataSource {
   // menyeret node di graph tidak mengubah urutan Notes List (yang diurutkan
   // berdasarkan updatedAt).
   Future<void> updatePosition(String id, double x, double y) async {
-    await (_db.update(_db.notes)..where((tbl) => tbl.id.equals(id)))
-        .write(NotesCompanion(posX: Value(x), posY: Value(y)));
+    await (_db.update(_db.notes)..where((tbl) => tbl.id.equals(id))).write(
+      NotesCompanion(posX: Value(x), posY: Value(y)),
+    );
   }
 }
 
