@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mesh_draft/core/theme/color_tokens.dart';
 import 'package:mesh_draft/core/widgets/page_header.dart';
 import 'package:mesh_draft/core/widgets/folders_action.dart';
+import 'package:mesh_draft/core/widgets/state_views.dart';
 import 'package:mesh_draft/features/link/domain/models/note_link_model.dart';
 import 'package:mesh_draft/features/note/application/services/note_service.dart';
 import 'package:mesh_draft/features/note/domain/models/note_model.dart';
@@ -33,13 +34,18 @@ class NoteListPage extends ConsumerWidget {
 
     Widget content;
     if (notesAsync.hasError) {
-      content = _ErrorState(error: notesAsync.error!);
+      content = ErrorStateView(error: notesAsync.error!);
     } else if (linksAsync.hasError) {
-      content = _ErrorState(error: linksAsync.error!);
+      content = ErrorStateView(error: linksAsync.error!);
     } else if (notes == null || links == null) {
       content = const Center(child: CircularProgressIndicator());
     } else if (notes.isEmpty) {
-      content = const _EmptyState();
+      content = EmptyStateView(
+        icon: Icons.note_alt_outlined,
+        message: 'Belum ada catatan.\nBuat yang pertama →',
+        actionLabel: 'Buat catatan',
+        onAction: () => context.push('/create'),
+      );
     } else {
       // Toolbar dibangun sekali di sini dan tetap mounted selama notes ada,
       // terlepas dari status loading searchedNotesProvider — provider itu
@@ -62,7 +68,7 @@ class NoteListPage extends ConsumerWidget {
       final searched = searchedAsync.value;
       Widget gridArea;
       if (searchedAsync.hasError) {
-        gridArea = _ErrorState(error: searchedAsync.error!);
+        gridArea = ErrorStateView(error: searchedAsync.error!);
       } else if (searched == null) {
         gridArea = const Center(child: CircularProgressIndicator());
       } else {
@@ -241,22 +247,6 @@ class _NotesGrid extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.error});
-
-  final Object error;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(MeshSpacing.lg),
-        child: Text('Gagal memuat catatan: $error'),
-      ),
-    );
-  }
-}
-
 class _SearchEmptyState extends StatelessWidget {
   const _SearchEmptyState({required this.query});
 
@@ -313,37 +303,3 @@ class _NoResultsState extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(MeshSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.note_alt_outlined,
-              size: 72,
-              color: MeshColors.textMuted,
-            ),
-            const SizedBox(height: MeshSpacing.lg),
-            const Text(
-              'Belum ada catatan.\nBuat yang pertama →',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: MeshColors.textSecondary),
-            ),
-            const SizedBox(height: MeshSpacing.lg),
-            FilledButton.icon(
-              onPressed: () => context.push('/create'),
-              icon: const Icon(Icons.add),
-              label: const Text('Buat catatan'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
