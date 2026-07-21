@@ -45,7 +45,7 @@ app.*.map.json
 /android/app/release
 
 # MeshDraft — context & process artifacts, not project output (see CLAUDE.md)
-docs/
+_ref/
 *.spec.md
 *.plan.md
 SPIKE_REPORT.md
