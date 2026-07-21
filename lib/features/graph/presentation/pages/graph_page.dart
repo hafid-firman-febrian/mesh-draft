@@ -30,6 +30,10 @@ class GraphPage extends ConsumerWidget {
         message: 'Gagal memuat graph',
       );
     } else if (notes == null || links == null) {
+      // Tunggu KEDUA stream sebelum mount GraphView. Kalau notes sampai
+      // duluan (links masih kosong), GraphView render tanpa edge lalu simulasi
+      // reheat dua kali saat links menyusul — node "dihisap" ke tengah.
+      // Invarian yang sama dijaga di graph_controller.dart.
       content = const Center(child: CircularProgressIndicator());
     } else if (notes.isEmpty) {
       content = EmptyStateView(

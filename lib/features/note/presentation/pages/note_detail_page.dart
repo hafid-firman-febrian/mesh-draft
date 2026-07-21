@@ -152,10 +152,10 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
           if (note != null)
             IconButton(
               icon: const Icon(PhosphorIconsRegular.trash),
-              color: Theme.of(context).colorScheme.error,
               // PopupMenuItem yang digantikan punya teks 'Delete' yang dibaca
-              // screen reader. Ikon telanjang tanpa tooltip menghapus nama
-              // aksi itu — IconButton.tooltip mengisi Semantics.label sekaligus.
+              // screen reader. Ikon telanjang tanpa nama menghilangkannya —
+              // IconButton.tooltip mengisi Semantics.tooltip (bukan label),
+              // yang tetap dibacakan TalkBack/VoiceOver.
               tooltip: 'Hapus',
               onPressed: () => _confirmDelete(context, linkCount),
             ),
