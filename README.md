@@ -1,24 +1,24 @@
 # MeshDraft
 
-Aplikasi catatan mobile di mana **visualisasi graph adalah produknya**, bukan fitur pelengkap.
+A mobile note-taking app where **the graph visualization is the product**, not a side feature.
 
-Catatan saling dihubungkan, lalu relasinya dirender sebagai graph force-directed yang hidup — node memantul saat dimuat, bisa di-drag, dan tetangganya ikut bereaksi. Ditujukan untuk knowledge worker yang berpikir lewat koneksi antar-ide, bukan lewat folder.
+Notes are linked to one another, and those relationships are rendered as a living force-directed graph — nodes bounce as they load, can be dragged, and their neighbours react. Built for knowledge workers who think in connections between ideas rather than in folders.
 
-**Status:** MVP, local-only. Semua data ada di SQLite pada device. Tidak ada akun, tidak ada sync, tidak ada jaringan.
+**Status:** MVP, local-only. All data lives in SQLite on the device. No accounts, no sync, no network.
 
 ---
 
-## Layar
+## Screens
 
-| Layar | Route | Isi |
+| Screen | Route | Contents |
 |---|---|---|
-| Notes List | `/notes` | Grid catatan, pencarian, filter (semua / terhubung / lepas) |
-| Graph | `/graph` | Force simulation, pan & zoom, drag node |
-| Note Detail | `/note/:id` | Baca & edit, daftar catatan tertaut |
-| Create Note | `/create` | Note detail dengan fokus otomatis ke judul |
-| Link Modal | `/note/:id/link` | Bottom sheet untuk menautkan ke catatan lain |
+| Notes List | `/notes` | Note grid, search, filters (all / linked / orphan) |
+| Graph | `/graph` | Force simulation, pan & zoom, node dragging |
+| Note Detail | `/note/:id` | Read & edit, list of linked notes |
+| Create Note | `/create` | Note detail with the title auto-focused |
+| Link Modal | `/note/:id/link` | Bottom sheet for linking to another note |
 
-Notes dan Graph adalah dua tab dalam `StatefulShellRoute` — state tiap tab bertahan saat berpindah.
+Notes and Graph are two tabs inside a `StatefulShellRoute` — each tab keeps its state when you switch away.
 
 ---
 
@@ -30,9 +30,9 @@ dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-**Langkah `build_runner` tidak opsional.** File `*.g.dart` dan `*.freezed.dart` sengaja tidak di-commit (lihat `.gitignore`), jadi setelah clone project **tidak akan compile** sebelum code generation jalan. Drift, Riverpod, dan Freezed semuanya bergantung padanya.
+**The `build_runner` step is not optional.** `*.g.dart` and `*.freezed.dart` files are deliberately not committed (see `.gitignore`), so a fresh clone **will not compile** until code generation has run. Drift, Riverpod, and Freezed all depend on it.
 
-Selama pengembangan, biarkan mode watch berjalan di terminal terpisah:
+During development, leave watch mode running in a separate terminal:
 
 ```bash
 dart run build_runner watch --delete-conflicting-outputs
@@ -40,83 +40,83 @@ dart run build_runner watch --delete-conflicting-outputs
 
 ---
 
-## Perintah
+## Commands
 
 ```bash
 flutter analyze                  # linter
 flutter test                     # unit + widget + integration
 dart format .                    # formatter
-flutter run --profile            # wajib untuk profiling graph
+flutter run --profile            # required for graph profiling
 ```
 
-Profiling graph **harus** di HP Android fisik dengan `--profile`. Debug mode 3–10× lebih lambat dan memberi angka yang menyesatkan.
+Graph profiling **must** be done on a physical Android device with `--profile`. Debug mode is 3–10× slower and produces misleading numbers.
 
 ---
 
 ## Tech Stack
 
-| Bagian | Pilihan |
+| Area | Choice |
 |---|---|
 | Framework | Flutter (iOS + Android) |
 | State | Riverpod — `Notifier` / `AsyncNotifier` |
 | Routing | go_router |
 | Database | Drift (SQLite), local-only |
-| Model | Freezed |
-| Graph | `CustomPainter` + `InteractiveViewer`, force simulation manual |
-| Styling | Material 3, tema gelap |
+| Models | Freezed |
+| Graph | `CustomPainter` + `InteractiveViewer`, hand-written force simulation |
+| Styling | Material 3, dark theme |
 
 ---
 
-## Struktur
+## Structure
 
 ```
 lib/
-├── core/           theme, storage (Drift), widget & util lintas-feature
+├── core/           theme, storage (Drift), cross-feature widgets & utils
 ├── features/
-│   ├── note/       CRUD catatan
-│   ├── link/       menghubungkan catatan
-│   └── graph/      visualisasi graph
+│   ├── note/       note CRUD
+│   ├── link/       linking notes together
+│   └── graph/      graph visualization
 └── router/         go_router
 ```
 
-Tiap feature memakai lapisan yang sama:
+Every feature uses the same layering:
 
 ```
 data/{data_sources,repositories} → domain/models → application/services → presentation/{controllers,pages,widgets}
 ```
 
-Business logic tinggal di `application/services`. Controller hanya menyambungkan service ke UI.
+Business logic lives in `application/services`. Controllers only wire services to the UI.
 
 ---
 
-## Skema Data
+## Data Model
 
-Dua tabel, `Notes` dan `NoteLinks`, dengan foreign key cascade dari link ke catatan.
+Two tables, `Notes` and `NoteLinks`, with a cascading foreign key from links to notes.
 
-`Notes.posX` / `posY` nullable — `null` berarti user belum pernah menggeser node itu, sehingga posisinya dihitung oleh simulasi. Begitu di-drag, posisinya disimpan dan menjadi pinned.
+`Notes.posX` / `posY` are nullable — `null` means the user has never moved that node, so its position is computed by the simulation. Once dragged, the position is persisted and the node becomes pinned.
 
 ---
 
-## Keputusan yang Mudah Dilanggar
+## Decisions That Are Easy to Break
 
-Empat aturan berikut **tidak akan tertangkap `flutter analyze`**. Melanggarnya menghasilkan kode yang terlihat benar tapi salah.
+The four rules below **will not be caught by `flutter analyze`**. Breaking them produces code that looks correct but isn't.
 
-**1. Link dinormalisasi sebelum disimpan.** Link bersifat dua arah secara semantik, jadi `sourceId` selalu id yang lebih kecil:
+**1. Links are normalized before being stored.** A link is semantically bidirectional, so `sourceId` is always the smaller id:
 
 ```dart
 final (source, target) = a.compareTo(b) < 0 ? (a, b) : (b, a);
 ```
 
-Tanpa ini A→B dan B→A tersimpan sebagai dua baris berbeda padahal maknanya sama, dan `UNIQUE(sourceId, targetId)` tidak menangkapnya. Aturan ini hidup di `LinkService` — bukan di UI, bukan di repository.
+Without this, A→B and B→A are stored as two separate rows despite meaning the same thing, and `UNIQUE(sourceId, targetId)` won't catch it. This rule lives in `LinkService` — not in the UI, not in the repository.
 
-**2. `PRAGMA foreign_keys = ON` di `beforeOpen`.** SQLite menonaktifkan foreign key secara default. Tanpa pragma ini `onDelete: cascade` tidak jalan dan link yatim tertinggal setiap kali catatan dihapus.
+**2. `PRAGMA foreign_keys = ON` in `beforeOpen`.** SQLite disables foreign keys by default. Without this pragma, `onDelete: cascade` never fires and orphaned links pile up every time a note is deleted.
 
-**3. Pembacaan selalu dari local.** Drift adalah satu-satunya sumber kebenaran. Tidak ada pola `try remote → catch → local`.
+**3. Reads always come from local.** Drift is the single source of truth. There is no `try remote → catch → local` pattern.
 
-**4. Watch, jangan refresh.** Controller memakai `Stream` dari Drift. Jangan panggil ulang query setelah menulis — Drift memancarkan daftar barunya sendiri:
+**4. Watch, don't refresh.** Controllers consume Drift `Stream`s. Don't re-run a query after a write — Drift emits the new list on its own:
 
 ```dart
-// ✗ query ganda, kedipan loading
+// ✗ duplicate query, loading flicker
 await service.createNote(...);
 await _loadNotes();
 
@@ -128,44 +128,44 @@ await service.createNote(...);
 
 ## Graph Rendering
 
-`CustomPainter` + `InteractiveViewer` dengan force simulation manual. **Bukan `graphview`.**
+`CustomPainter` + `InteractiveViewer` with a hand-written force simulation. **Not `graphview`.**
 
-Alasannya bukan performa — keduanya lolos target dengan margin besar. Alasannya graph harus *hidup*. `graphview` menghitung layout sekali saat init lalu simulasinya mati: tidak bisa bouncing, dan drag akan snap alih-alih mengalir.
+The reason isn't performance — both clear the target with plenty of headroom. The reason is that the graph has to feel *alive*. `graphview` computes its layout once at init and then the simulation is dead: no bouncing, and dragging snaps instead of flowing.
 
-Target performa: **≤16ms (60fps) saat pan sambil simulasi berjalan, 100 node**, diukur di HP Android fisik dalam profile mode.
+Performance target: **≤16ms (60fps) while panning with the simulation running, 100 nodes**, measured on a physical Android device in profile mode.
 
-### Konstanta fisika
+### Physics constants
 
-Konstanta di `graph_layout_service.dart` (`kForceScale`, `kVelocityDamping`, `kTemperatureCutoff`, `kIdealDistance`, `kRepulsionCutoffFactor`, dan lainnya) **jangan diubah tanpa mengukur ulang.** Tiap angka lahir dari bug nyata; komentar panjang di atasnya menjelaskan bug mana. Komentar itu sengaja dipertahankan.
+The constants in `graph_layout_service.dart` (`kForceScale`, `kVelocityDamping`, `kTemperatureCutoff`, `kIdealDistance`, `kRepulsionCutoffFactor`, and others) **must not be changed without re-measuring.** Every number came out of a real bug; the long comments above them explain which one. Those comments are kept on purpose.
 
-Kalau memang harus diubah:
+If a change really is needed:
 
-1. Print `temp`, `maxSpeed`, `maxRawDisp`, dan `bounds` tiap 60 frame
-2. Pastikan `temp` mencapai 0 dan `bounds` beku — tanda konvergen
-3. Pastikan `maxSpeed` **tidak** identik dengan `temp` frame sebelumnya. Kalau identik, gerakan digerakkan speed cap alih-alih fisika, dan akan terlihat kasar
+1. Print `temp`, `maxSpeed`, `maxRawDisp`, and `bounds` every 60 frames
+2. Confirm `temp` reaches 0 and `bounds` freezes — that's convergence
+3. Confirm `maxSpeed` is **not** identical to the previous frame's `temp`. If it is, motion is being driven by the speed cap rather than by physics, and it will look coarse
 
-### Jebakan rendering
+### Rendering pitfalls
 
-- **Jangan clamp posisi node ke ukuran layar.** Layout force-directed harus bebas menyebar; `InteractiveViewer` yang mengurus navigasi. Clamp bikin node menumpuk di tepi dan bergetar.
-- **`InteractiveViewer` wajib `constrained: false`.** Default `true` memeras konten masuk viewport sampai layar tampak kosong.
-- **Jangan hitung transform awal dari `renderBox.size`.** Frame pertama bisa melaporkan viewport (0,0) dan meracuni transform secara permanen.
-- **`CustomPaint` pakai `repaint:` yang di-hook ke `AnimationController`**, bukan `setState()` per frame.
-- **Objek `Random` disimpan sebagai field dengan seed tetap** — determinisme diperlukan agar hasil pengukuran bisa dibandingkan.
+- **Don't clamp node positions to the screen size.** A force-directed layout has to be free to spread out; `InteractiveViewer` handles navigation. Clamping piles nodes up against the edges and makes them jitter.
+- **`InteractiveViewer` requires `constrained: false`.** The default `true` squeezes the content into the viewport until the screen looks empty.
+- **Don't derive the initial transform from `renderBox.size`.** The first frame can report a (0,0) viewport and poison the transform permanently.
+- **`CustomPaint` uses `repaint:` hooked to an `AnimationController`**, not `setState()` per frame.
+- **The `Random` instance is stored as a field with a fixed seed** — determinism is what makes measurements comparable between runs.
 
 ---
 
-## Test
+## Tests
 
 ```bash
 flutter test
 ```
 
-Cakupan: unit (service & layout), widget (halaman & komponen), dan integration (cascade delete, persistensi posisi node).
+Coverage spans unit (services & layout), widget (pages & components), and integration (cascade delete, node position persistence).
 
-`LinkService` adalah prioritas tertinggi — di situlah aturan normalisasi berada, dan itu satu-satunya tempat bug duplikat dua arah bisa lolos diam-diam. Ujilah dari kedua arah: link A→B, lalu coba B→A; yang kedua harus ditolak.
+`LinkService` is the top priority — it's where the normalization rule lives, and the only place a bidirectional-duplicate bug can slip through unnoticed. Test it from both directions: link A→B, then try B→A; the second one must be rejected.
 
 ---
 
-## Di Luar Scope MVP
+## Out of MVP Scope
 
-Sudah dijadwalkan untuk fase berikutnya dan **sengaja belum dibangun**: auth, Supabase, sync, settings screen, toggle tema manual, AI auto-link, Cornell Notes, tags, rich text, dan layout landscape/tablet.
+Scheduled for later phases and **deliberately not built yet**: auth, Supabase, sync, a settings screen, a manual theme toggle, AI auto-linking, Cornell Notes, tags, rich text, and landscape/tablet layouts.
